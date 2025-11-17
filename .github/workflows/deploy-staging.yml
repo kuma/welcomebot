@@ -1,0 +1,91 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - main  # Auto-deploy main branch to staging
+
+# Give write permissions to push manifest changes back to repo
+permissions:
+  contents: write  # Allow pushing commits
+  packages: write  # Allow pushing to registries (if needed)
+
+env:
+  REGISTRY: harbor.example.com
+  IMAGE_BASE: welcomebot
+
+jobs:
+  build-and-update-manifest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Get short SHA
+        id: sha
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and push images (master + worker)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:staging
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:${{ steps.sha.outputs.SHORT_SHA }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-worker:staging
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-worker:${{ steps.sha.outputs.SHORT_SHA }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:buildcache-staging
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:buildcache-staging,mode=max
+
+      - name: Update staging kustomization
+        run: |
+          cd deployments/overlays/staging
+          
+          # Update image tags in kustomization.yaml
+          # Note: ArgoCD will detect this change and auto-deploy
+          # Use .bak for compatibility with both Linux (GNU sed) and macOS (BSD sed)
+          sed -i.bak "s|newTag: .*|newTag: ${{ steps.sha.outputs.SHORT_SHA }}|g" kustomization.yaml
+          rm -f kustomization.yaml.bak
+
+      - name: Commit updated manifest
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add deployments/overlays/staging/kustomization.yaml
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(staging): update images to ${{ steps.sha.outputs.SHORT_SHA }}"
+            git push origin HEAD:main
+          fi
+
+      - name: Notify deployment
+        run: |
+          echo "✅ Manifest updated!"
+          echo "Commit SHA: ${{ steps.sha.outputs.SHORT_SHA }}"
+          echo ""
+          echo "ArgoCD will deploy automatically within 3 minutes."
+          echo "Check status: kubectl get application welcomebot-staging -n argocd"
+          echo "Or via ArgoCD UI: https://argocd.yourdomain.com/applications/welcomebot-staging"
+
+      - name: Create deployment annotation
+        run: |
+          echo "::notice title=Staging Deployment::Images built and manifest updated. ArgoCD will sync automatically. Commit: ${{ steps.sha.outputs.SHORT_SHA }}"
+

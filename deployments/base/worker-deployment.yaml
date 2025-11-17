@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: welcomebot-worker
+  labels:
+    app: welcomebot
+    component: worker
+spec:
+  replicas: 2  # Can scale workers independently
+  selector:
+    matchLabels:
+      app: welcomebot
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: welcomebot
+        component: worker
+    spec:
+      imagePullSecrets:
+      - name: harbor-registry
+      containers:
+      - name: worker
+        image: harbor.example.com/welcomebot/welcomebot-worker:latest
+        imagePullPolicy: Always
+        command: ["/app/worker"]
+        env:
+        # PostgreSQL Configuration
+        - name: POSTGRES_HOST
+          value: "postgres-service"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_DB
+        - name: POSTGRES_SSLMODE
+          value: "disable"
+        
+        # Redis Configuration
+        - name: REDIS_SENTINEL_ADDRS
+          value: "redis-sentinel:26379"
+        - name: REDIS_MASTER_NAME
+          value: "welcomebot-master"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: REDIS_PASSWORD
+              optional: true
+        
+        # Logging Configuration
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOG_FORMAT
+          value: "json"
+        
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: welcomebot-worker
+  labels:
+    app: welcomebot
+    component: worker
+spec:
+  selector:
+    app: welcomebot
+    component: worker
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+

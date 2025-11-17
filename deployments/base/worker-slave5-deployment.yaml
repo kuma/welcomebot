@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: welcomebot-worker-slave5
+  labels:
+    app: welcomebot
+    component: worker
+    slave: slave-5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: welcomebot
+      component: worker
+      slave: slave-5
+  template:
+    metadata:
+      labels:
+        app: welcomebot
+        component: worker
+        slave: slave-5
+    spec:
+      imagePullSecrets:
+      - name: harbor-registry
+      containers:
+      - name: worker
+        image: harbor.example.com/welcomebot/welcomebot-worker:latest
+        imagePullPolicy: Always
+        command: ["/app/worker"]
+        env:
+        # Slave Configuration
+        - name: SLAVE_ID
+          value: "slave-5"
+        - name: DISCORD_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: SLAVE_5_TOKEN
+        
+        # PostgreSQL Configuration
+        - name: POSTGRES_HOST
+          value: "postgres-service"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_DB
+        - name: POSTGRES_SSLMODE
+          value: "disable"
+        
+        # Redis Configuration
+        - name: REDIS_SENTINEL_ADDRS
+          value: "redis-sentinel:26379"
+        - name: REDIS_MASTER_NAME
+          value: "welcomebot-master"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: REDIS_PASSWORD
+              optional: true
+        
+        # Logging Configuration
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOG_FORMAT
+          value: "json"
+        
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+

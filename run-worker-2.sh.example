@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Slave Bot 2 Configuration
+export SLAVE_ID="slave-2"
+export DISCORD_BOT_TOKEN="your-slave2-bot-token-here"
+
+# Database Configuration
+export POSTGRES_HOST="localhost"
+export POSTGRES_PORT="5432"
+export POSTGRES_USER="welcomebot"
+export POSTGRES_PASSWORD="your-password"
+export POSTGRES_DB="welcomebot"
+export POSTGRES_SSLMODE="disable"
+
+# Redis Configuration
+export REDIS_ADDR="localhost:6379"
+export REDIS_PASSWORD=""
+
+# Logging
+export LOG_LEVEL="info"
+export LOG_FORMAT="json"
+
+# Run worker
+./worker
+

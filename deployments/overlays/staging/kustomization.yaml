@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: welcomebot-staging
+
+# Reference base manifests
+resources:
+  - ../../base
+  - namespace.yaml
+  # Staging uses simple Redis (single instance with persistence)
+  - redis.yaml
+
+# Image tags for staging (will be updated by CI/CD)
+images:
+  - name: harbor.example.com/welcomebot/welcomebot-master
+    newTag: staging
+  - name: harbor.example.com/welcomebot/welcomebot-worker
+    newTag: staging
+
+# Apply staging-specific patches
+patches:
+  - path: patches/master-patch.yaml
+  - path: patches/worker-slave1-patch.yaml
+  - path: patches/worker-slave2-patch.yaml
+  - path: patches/worker-slave3-patch.yaml
+  - path: patches/postgres-patch.yaml
+  - path: patches/redis-patch.yaml
+
+# Common labels for staging
+labels:
+  - pairs:
+      environment: staging
+
+# Note: Secrets must be created manually in Kubernetes
+# See STAGING_SETUP.md for instructions:
+#   kubectl create secret generic welcomebot-secrets \
+#     --from-env-file=deployments/overlays/staging/secrets.env \
+#     -n welcomebot-staging
+#
+#   kubectl create secret docker-registry harbor-registry \
+#     --docker-server=harbor.example.com \
+#     --docker-username=USER \
+#     --docker-password=PASS \
+#     -n welcomebot-staging
+

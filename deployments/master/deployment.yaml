@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: welcomebot-master
+  namespace: welcomebot
+  labels:
+    app: welcomebot
+    component: master
+spec:
+  replicas: 1  # Should only run one Discord bot instance
+  selector:
+    matchLabels:
+      app: welcomebot
+      component: master
+  template:
+    metadata:
+      labels:
+        app: welcomebot
+        component: master
+    spec:
+      containers:
+      - name: master
+        image: harbor.morikuma.org/welcomebot/welcomebot-master:latest
+        imagePullPolicy: Always
+        command: ["/app/master"]
+        env:
+        # Discord Configuration
+        - name: DISCORD_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: DISCORD_BOT_TOKEN
+        
+        # PostgreSQL Configuration
+        - name: POSTGRES_HOST
+          value: "postgres-service"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: POSTGRES_DB
+        - name: POSTGRES_SSLMODE
+          value: "disable"
+        
+        # Redis Sentinel Configuration
+        - name: REDIS_SENTINEL_ADDRS
+          value: "redis-sentinel:26379"
+        - name: REDIS_MASTER_NAME
+          value: "welcomebot-master"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: welcomebot-secrets
+              key: REDIS_PASSWORD
+              optional: true
+        
+        # Fallback to single Redis (if not using Sentinel)
+        # - name: REDIS_ADDR
+        #   value: "redis-service:6379"
+        
+        # Logging Configuration
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOG_FORMAT
+          value: "json"
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        # Health probes disabled - HTTP endpoints not yet implemented
+        # TODO: Add HTTP health server to master bot
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 8080
+        #   initialDelaySeconds: 30
+        #   periodSeconds: 10
+        #   timeoutSeconds: 5
+        #   failureThreshold: 3
+        # 
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ready
+        #     port: 8080
+        #   initialDelaySeconds: 10
+        #   periodSeconds: 5
+        #   timeoutSeconds: 3
+        #   failureThreshold: 3
+
+# Service disabled - health endpoints not yet implemented
+# TODO: Enable once HTTP health server is added to master bot
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: welcomebot-master
+#   namespace: welcomebot
+# spec:
+#   selector:
+#     app: welcomebot
+#     component: master
+#   ports:
+#   - name: health
+#     port: 8080
+#     targetPort: 8080
+#   type: ClusterIP
+

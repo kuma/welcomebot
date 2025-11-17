@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: welcomebot-prod
+
+# Reference base manifests
+resources:
+  - ../../base
+  - namespace.yaml
+  # Production uses Redis Sentinel (high availability)
+  - redis-sentinel.yaml
+
+# Image tags for production (will be updated by CI/CD)
+images:
+  - name: harbor.example.com/welcomebot/welcomebot-master
+    newTag: v1.0.0
+  - name: harbor.example.com/welcomebot/welcomebot-worker
+    newTag: v1.0.0
+
+# Apply production-specific patches
+patches:
+  - path: patches/master-patch.yaml
+  - path: patches/worker-slave1-patch.yaml
+  - path: patches/worker-slave2-patch.yaml
+  - path: patches/worker-slave3-patch.yaml
+  - path: patches/postgres-patch.yaml
+  - path: patches/redis-sentinel-patch.yaml
+
+# Common labels for production
+labels:
+  - pairs:
+      environment: production
+
+# Note: Secrets must be created manually in Kubernetes
+# See PRODUCTION_SETUP.md for instructions:
+#   kubectl create secret generic welcomebot-secrets \
+#     --from-env-file=deployments/overlays/production/secrets.env \
+#     -n welcomebot-prod
+#
+#   kubectl create secret docker-registry harbor-registry \
+#     --docker-server=harbor.example.com \
+#     --docker-username=USER \
+#     --docker-password=PASS \
+#     -n welcomebot-prod
+

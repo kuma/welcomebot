@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Example worker (slave) bot startup script
+# Copy this to run-worker-1.sh, run-worker-2.sh, run-worker-3.sh and configure each
+
+# Slave ID (slave-1, slave-2, or slave-3)
+export SLAVE_ID="slave-1"
+
+# Discord Bot Token for THIS slave
+export DISCORD_BOT_TOKEN="your-slave-bot-token-here"
+
+# Database Configuration
+export POSTGRES_HOST="localhost"
+export POSTGRES_PORT="5432"
+export POSTGRES_USER="welcomebot"
+export POSTGRES_PASSWORD="your-password"
+export POSTGRES_DB="welcomebot"
+export POSTGRES_SSLMODE="disable"
+
+# Redis Configuration
+export REDIS_ADDR="localhost:6379"
+export REDIS_PASSWORD=""
+
+# Logging
+export LOG_LEVEL="info"
+export LOG_FORMAT="json"
+
+# Run worker
+./worker
+

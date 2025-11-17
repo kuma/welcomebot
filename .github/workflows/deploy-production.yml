@@ -1,0 +1,163 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (e.g., v1.0.0, v1.2.3)
+
+# Give write permissions to push manifest changes back to repo
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: harbor.example.com
+  IMAGE_BASE: welcomebot
+
+jobs:
+  build-and-update-manifest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
+
+      - name: Build and push images (master + worker)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64  # Production only needs amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:${{ steps.version.outputs.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-worker:${{ steps.version.outputs.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-worker:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:buildcache,mode=max
+
+      - name: Update production kustomization
+        run: |
+          cd deployments/overlays/production
+          
+          # Update image tags in kustomization.yaml with version tag
+          # Use .bak for compatibility with both Linux (GNU sed) and macOS (BSD sed)
+          sed -i.bak "s|newTag: .*|newTag: ${{ steps.version.outputs.VERSION }}|g" kustomization.yaml
+          rm -f kustomization.yaml.bak
+
+      - name: Commit updated manifest
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add deployments/overlays/production/kustomization.yaml
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(production): update images to ${{ steps.version.outputs.VERSION }}"
+            git push origin HEAD:main
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            echo "First release - no previous tag"
+            CHANGELOG="Initial release 🎉"
+          else
+            echo "Generating changelog from $PREV_TAG to ${{ steps.version.outputs.VERSION }}"
+            
+            # Generate changelog with commit messages
+            CHANGELOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            
+            # Count commits
+            COMMIT_COUNT=$(git rev-list $PREV_TAG..HEAD --count)
+            echo "Found $COMMIT_COUNT commits"
+          fi
+          
+          # Save to file and output (handle multiline)
+          echo "$CHANGELOG" > /tmp/changelog.txt
+          echo "PREV_TAG=$PREV_TAG" >> $GITHUB_OUTPUT
+          
+          # Set multiline output
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "CHANGELOG<<$EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## 🚀 Production Release: ${{ steps.version.outputs.VERSION }}
+            
+            ### 📦 Images
+            
+            - `${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-master:${{ steps.version.outputs.VERSION }}`
+            - `${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/welcomebot-worker:${{ steps.version.outputs.VERSION }}`
+            
+            ### 📝 Changes
+            
+            ${{ steps.changelog.outputs.CHANGELOG }}
+            
+            ### 🔧 Deployment
+            
+            **Manifest updated:** `deployments/overlays/production/kustomization.yaml`
+            
+            **To deploy:**
+            1. Review changes in [ArgoCD UI](https://argocd.yourdomain.com/applications/welcomebot-production)
+            2. Click "Sync" or run: `argocd app sync welcomebot-production`
+            3. Monitor: `kubectl get pods -n welcomebot-prod -w`
+            
+            **To rollback:**
+            ```bash
+            argocd app rollback welcomebot-production
+            ```
+            
+            ---
+            
+            ${{ steps.changelog.outputs.PREV_TAG && format('**Full Changelog**: [{0}...{1}](https://github.com/{2}/compare/{0}...{1})', steps.changelog.outputs.PREV_TAG, steps.version.outputs.VERSION, github.repository) || '**First Release**' }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true  # GitHub auto-generates additional notes
+
+      - name: Notify deployment ready
+        run: |
+          echo "✅ Production deployment ready!"
+          echo "Version: ${{ steps.version.outputs.VERSION }}"
+          echo ""
+          echo "⚠️  MANUAL SYNC REQUIRED for production"
+          echo ""
+          echo "To deploy:"
+          echo "  1. Review in ArgoCD UI: https://argocd.yourdomain.com/applications/welcomebot-production"
+          echo "  2. Verify the diff looks correct"
+          echo "  3. Click 'Sync' to deploy to production"
+          echo ""
+          echo "Or via CLI:"
+          echo "  argocd app sync welcomebot-production"
+

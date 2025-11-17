@@ -1,0 +1,78 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: welcomebot-lightprod
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - redis.yaml
+
+# Use Harbor registry images
+images:
+  - name: harbor.example.com/welcomebot/welcomebot-master
+    newName: harbor.morikuma.org/welcomebot/welcomebot-master
+    newTag: lightprod
+  - name: harbor.example.com/welcomebot/welcomebot-worker
+    newName: harbor.morikuma.org/welcomebot/welcomebot-worker
+    newTag: lightprod
+
+patches:
+  - path: patches/master-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-master
+  - path: patches/worker-slave1-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave1
+  - path: patches/worker-slave2-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave2
+  - path: patches/worker-slave3-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave3
+  - path: patches/worker-slave4-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave4
+  - path: patches/worker-slave5-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave5
+  - path: patches/worker-slave6-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave6
+  - path: patches/worker-slave7-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave7
+  - path: patches/worker-slave8-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave8
+  - path: patches/worker-slave9-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave9
+  - path: patches/worker-slave10-patch.yaml
+    target:
+      kind: Deployment
+      name: welcomebot-worker-slave10
+  - path: patches/postgres-patch.yaml
+    target:
+      kind: StatefulSet
+      name: postgres
+  - path: patches/redis-patch.yaml
+    target:
+      kind: Deployment
+      name: redis
+
+secretGenerator:
+  - name: welcomebot-secrets
+    envs:
+      - secrets.env
+

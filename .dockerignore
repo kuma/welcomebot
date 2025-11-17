@@ -1,0 +1,46 @@
+# Binaries
+bin/
+master
+worker
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Deployment files
+deployments/
+kubernetes/
+
+# Environment
+.env
+.env.local
+
+# Misc
+requirements/
+
+# Note: audio/ directory IS included (needed for onboarding voice files)
+# Note: assets/ directory IS included (needed for onboarding guide images)
+

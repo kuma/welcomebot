@@ -1,0 +1,48 @@
+linters:
+  enable:
+    - gofmt
+    - govet
+    - staticcheck
+    - errcheck
+    - gosimple
+    - unused
+    - ineffassign
+    - typecheck
+    - cyclop          # Complexity check
+    - funlen          # Function length
+    - gocognit        # Cognitive complexity
+    - nestif          # Nested if depth
+    - gocyclo         # Cyclomatic complexity
+    - misspell        # Spelling
+    - goconst         # Repeated strings
+    - goimports       # Import formatting
+    - revive          # General linting
+
+linters-settings:
+  funlen:
+    lines: 50
+    statements: 40
+  gocyclo:
+    min-complexity: 10
+  cyclop:
+    max-complexity: 10
+  gocognit:
+    min-complexity: 10
+  nestif:
+    min-complexity: 4
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - vendor
+    - deployments
+    - docs
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+

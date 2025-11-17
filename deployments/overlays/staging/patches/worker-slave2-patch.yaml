@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: welcomebot-worker-slave2
+spec:
+  template:
+    spec:
+      containers:
+      - name: worker
+        env:
+        # Override log level for staging
+        - name: LOG_LEVEL
+          value: "debug"
+        
+        # Use simple Redis instead of Sentinel for staging
+        - name: REDIS_ADDR
+          value: "redis-service:6379"
+        - name: REDIS_SENTINEL_ADDRS
+          value: ""
+        - name: REDIS_MASTER_NAME
+          value: ""
+        
+        # Staging-specific resources
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+

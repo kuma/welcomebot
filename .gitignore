@@ -1,0 +1,53 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/master
+/worker
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+*.key
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes secrets
+*-secret.yaml
+secrets.yaml
+secrets.env
+key.json
+
+# Logs
+*.log
+logs/
+
+run-master.sh
+run-worker.sh
+secrets.yaml
+switch-k8s.sh

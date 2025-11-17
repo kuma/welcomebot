@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: welcomebot-staging
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  # Source: Your Git repository
+  source:
+    repoURL: https://github.com/yourusername/welcomebot-template2
+    targetRevision: main  # Staging auto-deploys from main
+    path: deployments/overlays/staging
+  
+  # Destination: Where to deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: welcomebot-staging
+  
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true      # Delete resources not in Git
+      selfHeal: true   # Auto-fix drift
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Ignore HPA-managed replicas
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+

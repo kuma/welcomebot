@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: welcomebot-worker-slave2
+spec:
+  template:
+    spec:
+      containers:
+      - name: worker
+        env:
+        # Production log level
+        - name: LOG_LEVEL
+          value: "info"
+        
+        # Use Redis Sentinel for production
+        - name: REDIS_SENTINEL_ADDRS
+          value: "redis-sentinel-0.redis-sentinel-service:26379,redis-sentinel-1.redis-sentinel-service:26379,redis-sentinel-2.redis-sentinel-service:26379"
+        - name: REDIS_MASTER_NAME
+          value: "mymaster"
+        
+        # Production-specific resources (higher than staging)
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+

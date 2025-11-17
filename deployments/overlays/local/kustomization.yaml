@@ -1,0 +1,78 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: welcomebot-local
+
+# Reference base manifests
+resources:
+  - namespace.yaml
+  - ../../base
+  # Local uses simple Redis (single instance, no persistence)
+  - redis.yaml
+
+# Local uses local images (no registry)
+images:
+  - name: harbor.example.com/welcomebot/welcomebot-master
+    newName: welcomebot-master
+    newTag: local
+  - name: harbor.example.com/welcomebot/welcomebot-worker
+    newName: welcomebot-worker
+    newTag: local
+
+# Apply local-specific patches
+patches:
+  - path: patches/master-patch.yaml
+  - path: patches/worker-slave1-patch.yaml
+  - path: patches/worker-slave2-patch.yaml
+  - path: patches/worker-slave3-patch.yaml
+  - path: patches/postgres-patch.yaml
+  - path: patches/redis-patch.yaml
+  # Remove imagePullSecrets from all deployments
+  - patch: |-
+      - op: remove
+        path: /spec/template/spec/imagePullSecrets
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: welcomebot-master
+  - patch: |-
+      - op: remove
+        path: /spec/template/spec/imagePullSecrets
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: welcomebot-worker-slave1
+  - patch: |-
+      - op: remove
+        path: /spec/template/spec/imagePullSecrets
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: welcomebot-worker-slave2
+  - patch: |-
+      - op: remove
+        path: /spec/template/spec/imagePullSecrets
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: welcomebot-worker-slave3
+
+# Common labels for local
+labels:
+  - pairs:
+      environment: local
+
+# Generate secrets from secrets.env file
+# The dev-local.sh script will create secrets.env.example if not exists
+secretGenerator:
+  - name: welcomebot-secrets
+    envs:
+      - secrets.env
+    options:
+      disableNameSuffixHash: true
+
+

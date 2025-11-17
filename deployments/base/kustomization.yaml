@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Note: namespace.yaml is NOT included here
+  # Each overlay defines its own namespace
+  - master-deployment.yaml
+  - worker-slave1-deployment.yaml
+  - worker-slave2-deployment.yaml
+  - worker-slave3-deployment.yaml
+  - worker-slave4-deployment.yaml
+  - worker-slave5-deployment.yaml
+  - worker-slave6-deployment.yaml
+  - worker-slave7-deployment.yaml
+  - worker-slave8-deployment.yaml
+  - worker-slave9-deployment.yaml
+  - worker-slave10-deployment.yaml
+  - postgres.yaml
+  # Note: Redis is NOT included in base
+  # Local/Staging uses simple redis.yaml, Production uses redis-sentinel.yaml
+  # Each overlay includes its own Redis configuration
+
+# Common labels for all resources
+labels:
+  - pairs:
+      app: welcomebot
+      managed-by: kustomize
+

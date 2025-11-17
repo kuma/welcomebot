@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: welcomebot-local
+  labels:
+    name: welcomebot-local
+    environment: local
+

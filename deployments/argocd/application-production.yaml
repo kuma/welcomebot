@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: welcomebot-production
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  # Source: Your Git repository
+  source:
+    repoURL: https://github.com/yourusername/welcomebot-template2
+    targetRevision: main  # Production deploys from main (with version tags)
+    path: deployments/overlays/production
+  
+  # Destination: Where to deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: welcomebot-prod
+  
+  # Sync policy - Manual sync for production (safety)
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Manual sync for production - no automated sync
+  # This gives you control over when production updates happen
+  # You can still sync via UI or CLI when ready
+  
+  # Ignore HPA-managed replicas
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+
