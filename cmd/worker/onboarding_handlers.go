@@ -621,6 +621,86 @@ func (w *Worker) handleStep2Replay(ctx context.Context, s *discordgo.Session, i 
 	w.logger.Info("replaying step 2 audio", "user_id", userID)
 }
 
+// handleStep3GenderSelection handles gender selection button clicks in step 3.
+func (w *Worker) handleStep3GenderSelection(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, customID string) {
+	// Extract gender type and userID from customID: onboarding:gender:{genderType}:{userID}
+	parts := strings.Split(customID, ":")
+	if len(parts) < 4 {
+		w.logger.Error("invalid gender customID", "custom_id", customID)
+		return
+	}
+
+	genderType := parts[2]
+	userID := parts[3]
+
+	// Verify user is the one who started onboarding
+	if i.Member.User.ID != userID {
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "This button is not for you!",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
+	// Get active session
+	sessionKey := fmt.Sprintf("%s:%s", i.GuildID, userID)
+	w.sessionsMutex.RLock()
+	activeSession, exists := w.activeSessions[sessionKey]
+	w.sessionsMutex.RUnlock()
+
+	if !exists {
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "エラー: アクティブなセッションが見つかりません",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
+	// Map gender type to role ID
+	var roleID string
+	var roleName string
+	switch genderType {
+	case "male":
+		roleID = activeSession.MaleRoleID
+		roleName = "男性"
+	case "female":
+		roleID = activeSession.FemaleRoleID
+		roleName = "女性"
+	}
+
+	// Assign role if configured
+	if roleID != "" {
+		if err := s.GuildMemberRoleAdd(i.GuildID, userID, roleID); err != nil {
+			w.logger.Error("failed to add gender role", "error", err, "role_id", roleID)
+		}
+	}
+
+	// Acknowledge interaction with confirmation
+	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("%s のロールを付与しました", roleName),
+		},
+	})
+
+	// Wait before showing next selection
+	time.Sleep(1500 * time.Millisecond)
+
+	// Show age selection next
+	if err := activeSession.ShowAgeSelection(); err != nil {
+		w.logger.Error("failed to show age selection", "error", err)
+	}
+}
+
 // handleStep3AgeSelection handles age range button clicks in step 3.
 func (w *Worker) handleStep3AgeSelection(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, customID string) {
 	// Extract age type and userID from customID: onboarding:age:{ageType}:{userID}
@@ -1795,6 +1875,24 @@ func (w *Worker) handleStep7Complete(ctx context.Context, s *discordgo.Session, 
 			w.logger.Error("failed to remove setsumeikai3 role", "error", err, "role_id", activeSession.Setsumeikai3RoleID)
 		} else {
 			w.logger.Info("removed setsumeikai3 role", "user_id", userID, "role_id", activeSession.Setsumeikai3RoleID)
+		}
+	}
+
+	// Remove "Entrance" role (entrance) - MOVED FROM STEP 1
+	if activeSession.EntranceRoleID != "" {
+		if err := s.GuildMemberRoleRemove(i.GuildID, userID, activeSession.EntranceRoleID); err != nil {
+			w.logger.Error("failed to remove entrance role", "error", err, "role_id", activeSession.EntranceRoleID)
+		} else {
+			w.logger.Info("removed entrance role", "user_id", userID, "role_id", activeSession.EntranceRoleID)
+		}
+	}
+
+	// Remove "入会手続き" role (nyukai) - MOVED FROM STEP 2
+	if activeSession.NyukaiRoleID != "" {
+		if err := s.GuildMemberRoleRemove(i.GuildID, userID, activeSession.NyukaiRoleID); err != nil {
+			w.logger.Error("failed to remove nyukai role", "error", err, "role_id", activeSession.NyukaiRoleID)
+		} else {
+			w.logger.Info("removed nyukai role", "user_id", userID, "role_id", activeSession.NyukaiRoleID)
 		}
 	}
 

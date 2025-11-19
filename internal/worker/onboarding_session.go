@@ -35,8 +35,8 @@ type OnboardingSession struct {
 	currentAudioFile string // Current audio file being played
 	inProgressRoleID string
 	completedRoleID  string
-	entranceRoleID      string
-	nyukaiRoleID        string
+	EntranceRoleID      string // Exported for handler access
+	NyukaiRoleID        string // Exported for handler access
 	Setsumeikai1RoleID  string // Exported for handler access
 	Setsumeikai2RoleID  string // Exported for handler access
 	Setsumeikai3RoleID  string // Exported for handler access
@@ -49,6 +49,9 @@ type OnboardingSession struct {
 	Age30LateRoleID  string
 	Age40EarlyRoleID string
 	Age40LateRoleID  string
+	// Gender roles (exported for handler access)
+	MaleRoleID   string
+	FemaleRoleID string
 	// Voice type roles (exported for handler access)
 	HighVoiceRoleID    string
 	MidHighVoiceRoleID string
@@ -127,6 +130,9 @@ func NewOnboardingSession(
 	age30Late, _ := task.Payload["age_30_late_role"].(string)
 	age40Early, _ := task.Payload["age_40_early_role"].(string)
 	age40Late, _ := task.Payload["age_40_late_role"].(string)
+	// Gender roles
+	maleRole, _ := task.Payload["male_role"].(string)
+	femaleRole, _ := task.Payload["female_role"].(string)
 	// Voice type roles
 	highVoice, _ := task.Payload["high_voice_role"].(string)
 	midHighVoice, _ := task.Payload["mid_high_voice_role"].(string)
@@ -155,8 +161,8 @@ func NewOnboardingSession(
 		categoryID:             categoryID,
 		inProgressRoleID:       inProgressRole,
 		completedRoleID:        completedRole,
-		entranceRoleID:         entranceRole,
-		nyukaiRoleID:           nyukaiRole,
+		EntranceRoleID:         entranceRole,
+		NyukaiRoleID:           nyukaiRole,
 		Setsumeikai1RoleID:     setsumeikai1Role,
 		Setsumeikai2RoleID:     setsumeikai2Role,
 		Setsumeikai3RoleID:     setsumeikai3Role,
@@ -168,6 +174,8 @@ func NewOnboardingSession(
 		Age30LateRoleID:        age30Late,
 		Age40EarlyRoleID:       age40Early,
 		Age40LateRoleID:        age40Late,
+		MaleRoleID:             maleRole,
+		FemaleRoleID:           femaleRole,
 		HighVoiceRoleID:        highVoice,
 		MidHighVoiceRoleID:     midHighVoice,
 		MidVoiceRoleID:         midVoice,
@@ -768,14 +776,14 @@ func (s *OnboardingSession) StartStep1(guide string) error {
 	s.currentStep = 1
 	s.UpdateActivity()
 
-	// Remove "Entrance" role if configured
-	if s.entranceRoleID != "" {
-		if err := s.session.GuildMemberRoleRemove(s.guildID, s.userID, s.entranceRoleID); err != nil {
-			s.logger.Warn("failed to remove entrance role", "error", err, "role_id", s.entranceRoleID)
-		} else {
-			s.logger.Info("removed entrance role", "user_id", s.userID, "role_id", s.entranceRoleID)
-		}
-	}
+	// Remove "Entrance" role if configured - MOVED TO END
+	// if s.EntranceRoleID != "" {
+	// 	if err := s.session.GuildMemberRoleRemove(s.guildID, s.userID, s.EntranceRoleID); err != nil {
+	// 		s.logger.Warn("failed to remove entrance role", "error", err, "role_id", s.EntranceRoleID)
+	// 	} else {
+	// 		s.logger.Info("removed entrance role", "user_id", s.userID, "role_id", s.EntranceRoleID)
+	// 	}
+	// }
 
 	// Show Step 1 UI with buttons
 	embed := &discordgo.MessageEmbed{
@@ -873,14 +881,14 @@ func (s *OnboardingSession) StartStep2() error {
 		}
 	}
 
-	// Remove "入会手続き" role if configured
-	if s.nyukaiRoleID != "" {
-		if err := s.session.GuildMemberRoleRemove(s.guildID, s.userID, s.nyukaiRoleID); err != nil {
-			s.logger.Warn("failed to remove nyukai role", "error", err, "role_id", s.nyukaiRoleID)
-		} else {
-			s.logger.Info("removed nyukai role", "user_id", s.userID, "role_id", s.nyukaiRoleID)
-		}
-	}
+	// Remove "入会手続き" role if configured - MOVED TO END
+	// if s.NyukaiRoleID != "" {
+	// 	if err := s.session.GuildMemberRoleRemove(s.guildID, s.userID, s.NyukaiRoleID); err != nil {
+	// 		s.logger.Warn("failed to remove nyukai role", "error", err, "role_id", s.NyukaiRoleID)
+	// 	} else {
+	// 		s.logger.Info("removed nyukai role", "user_id", s.userID, "role_id", s.NyukaiRoleID)
+	// 	}
+	// }
 
 	// Message 1: First part of text
 	part1 := s.i18n.T(s.ctx, s.guildID, "onboarding.step2_description_part1")
@@ -977,13 +985,51 @@ func (s *OnboardingSession) StartStep3() error {
 		s.logger.Warn("failed to save session to cache", "error", err)
 	}
 
-	// Immediately show age selection buttons
-	return s.ShowAgeSelection()
+	// Immediately show gender selection buttons
+	return s.ShowGenderSelection()
+}
+
+// ShowGenderSelection displays gender selection buttons.
+func (s *OnboardingSession) ShowGenderSelection() error {
+	s.currentSubStep = 1
+	s.UpdateActivity()
+
+	embed := &discordgo.MessageEmbed{
+		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_gender_prompt"),
+		Color:       0x9b59b6,
+	}
+
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "男性",
+					Style:    discordgo.PrimaryButton,
+					CustomID: fmt.Sprintf("onboarding:gender:male:%s", s.userID),
+				},
+				discordgo.Button{
+					Label:    "女性",
+					Style:    discordgo.PrimaryButton,
+					CustomID: fmt.Sprintf("onboarding:gender:female:%s", s.userID),
+				},
+			},
+		},
+	}
+
+	_, err := s.session.ChannelMessageSendComplex(s.vcChannelID, &discordgo.MessageSend{
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: components,
+	})
+	if err != nil {
+		return fmt.Errorf("send gender selection: %w", err)
+	}
+
+	return s.saveSessionToCache()
 }
 
 // ShowAgeSelection displays age range selection buttons.
 func (s *OnboardingSession) ShowAgeSelection() error {
-	s.currentSubStep = 1
+	s.currentSubStep = 2
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1045,7 +1091,7 @@ func (s *OnboardingSession) ShowAgeSelection() error {
 
 // ShowVoiceTypeSelection displays voice type selection buttons.
 func (s *OnboardingSession) ShowVoiceTypeSelection() error {
-	s.currentSubStep = 2
+	s.currentSubStep = 3
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1098,7 +1144,7 @@ func (s *OnboardingSession) ShowVoiceTypeSelection() error {
 
 // ShowEroipuSelection displays eroipu OK/NG buttons.
 func (s *OnboardingSession) ShowEroipuSelection() error {
-	s.currentSubStep = 3
+	s.currentSubStep = 4
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1136,7 +1182,7 @@ func (s *OnboardingSession) ShowEroipuSelection() error {
 
 // ShowNeochiOkNgSelection displays neochi OK/NG buttons.
 func (s *OnboardingSession) ShowNeochiOkNgSelection() error {
-	s.currentSubStep = 4
+	s.currentSubStep = 5
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1174,7 +1220,7 @@ func (s *OnboardingSession) ShowNeochiOkNgSelection() error {
 
 // ShowNeochiHandlingSelection displays neochi handling buttons.
 func (s *OnboardingSession) ShowNeochiHandlingSelection() error {
-	s.currentSubStep = 5
+	s.currentSubStep = 6
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1212,7 +1258,7 @@ func (s *OnboardingSession) ShowNeochiHandlingSelection() error {
 
 // ShowDMSelection displays DM OK/NG buttons.
 func (s *OnboardingSession) ShowDMSelection() error {
-	s.currentSubStep = 6
+	s.currentSubStep = 7
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1250,7 +1296,7 @@ func (s *OnboardingSession) ShowDMSelection() error {
 
 // ShowFriendSelection displays friend OK/NG buttons.
 func (s *OnboardingSession) ShowFriendSelection() error {
-	s.currentSubStep = 7
+	s.currentSubStep = 8
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1288,7 +1334,7 @@ func (s *OnboardingSession) ShowFriendSelection() error {
 
 // ShowEventSelection displays event role buttons (users can select both).
 func (s *OnboardingSession) ShowEventSelection() error {
-	s.currentSubStep = 8
+	s.currentSubStep = 9
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
@@ -1326,7 +1372,7 @@ func (s *OnboardingSession) ShowEventSelection() error {
 
 // ShowStep3Completion shows the final message of step 3 with next button.
 func (s *OnboardingSession) ShowStep3Completion() error {
-	s.currentSubStep = 9
+	s.currentSubStep = 10
 	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{

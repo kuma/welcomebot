@@ -84,7 +84,15 @@ func (f *Feature) RegisterCommands() []*discordgo.ApplicationCommand {
 
 // GetMenuButton returns the menu button for this feature.
 func (f *Feature) GetMenuButton() *bot.MenuButton {
-	return nil // Hidden from menu
+	return &bot.MenuButton{
+		Label:       "🚻 性別ロール設定",
+		CustomID:    "menu:gender:setup",
+		Tier:        3,
+		Category:    "admin",
+		SubCategory: "configuration",
+		AdminOnly:   true,
+		IsCategory:  false,
+	}
 }
 
 // startWizard initiates the gender configuration wizard.

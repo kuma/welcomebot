@@ -532,8 +532,9 @@ func (f *Feature) handleOnboardingStart(ctx context.Context, s *discordgo.Sessio
 		return f.respondErrorMessage(ctx, s, i, guildID, "welcome.no_slaves_available")
 	}
 
-	// Get age range, voice type, and other roles configs
+	// Get age range, gender, voice type, and other roles configs
 	ageRangeConfig, _ := f.getAgeRangeConfig(ctx, guildID)
+	genderConfig, _ := f.getGenderConfig(ctx, guildID)
 	voiceTypeConfig, _ := f.getVoiceTypeConfig(ctx, guildID)
 	otherRolesConfig, _ := f.getOtherRolesConfig(ctx, guildID)
 
@@ -560,6 +561,12 @@ func (f *Feature) handleOnboardingStart(ctx context.Context, s *discordgo.Sessio
 		payload["age_30_late_role"] = ageRangeConfig.Age30LateRoleID
 		payload["age_40_early_role"] = ageRangeConfig.Age40EarlyRoleID
 		payload["age_40_late_role"] = ageRangeConfig.Age40LateRoleID
+	}
+
+	// Add gender roles if configured
+	if genderConfig != nil {
+		payload["male_role"] = genderConfig.MaleRoleID
+		payload["female_role"] = genderConfig.FemaleRoleID
 	}
 
 	// Add voice type roles if configured
@@ -1176,6 +1183,32 @@ func (f *Feature) getAgeRangeConfig(ctx context.Context, guildID string) (*AgeRa
 	}
 	if age40Late != nil {
 		config.Age40LateRoleID = *age40Late
+	}
+
+	return &config, nil
+}
+
+// getGenderConfig retrieves gender configuration.
+func (f *Feature) getGenderConfig(ctx context.Context, guildID string) (*GenderConfig, error) {
+	query := `
+		SELECT guild_id, male_role_id, female_role_id
+		FROM guild_gender_roles 
+		WHERE guild_id = $1
+	`
+	row := f.db.QueryRow(ctx, query, guildID)
+
+	var config GenderConfig
+	var male, female *string
+	err := row.Scan(&config.GuildID, &male, &female)
+	if err != nil {
+		return nil, err
+	}
+
+	if male != nil {
+		config.MaleRoleID = *male
+	}
+	if female != nil {
+		config.FemaleRoleID = *female
 	}
 
 	return &config, nil

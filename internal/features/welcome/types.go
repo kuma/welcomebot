@@ -83,6 +83,13 @@ type AgeRangeConfig struct {
 	Age40LateRoleID  string `json:"age_40_late_role_id,omitempty"`
 }
 
+// GenderConfig represents gender role configuration for a guild.
+type GenderConfig struct {
+	GuildID      string `json:"guild_id"`
+	MaleRoleID   string `json:"male_role_id,omitempty"`
+	FemaleRoleID string `json:"female_role_id,omitempty"`
+}
+
 // VoiceTypeConfig represents voice type role configuration for a guild.
 type VoiceTypeConfig struct {
 	GuildID       string `json:"guild_id"`

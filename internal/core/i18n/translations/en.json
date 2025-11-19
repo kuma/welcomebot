@@ -274,6 +274,7 @@
     "step2_description": "Placeholder text for Step 2. We will edit the contents later.",
     "step3_title": "🎯 必須ロール取得",
     "step3_description": "Placeholder text for Step 3. We will edit the contents later.",
+    "step3_gender_prompt": "Please tell us your gender",
     "step3_age_prompt": "◆あなたの年齢に当てはまる項目を選んでください。",
     "step3_voice_prompt": "あなたの声質を選んでください",
     "step3_eroipu_prompt": "エロイプ OK? NG?",

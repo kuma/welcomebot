@@ -433,6 +433,12 @@ func (w *Worker) handleInteraction(s *discordgo.Session, i *discordgo.Interactio
 		return
 	}
 
+	// Handle Step 3 Gender selection: onboarding:gender:{genderType}:{userID}
+	if strings.HasPrefix(customID, "onboarding:gender:") {
+		w.handleStep3GenderSelection(ctx, s, i, customID)
+		return
+	}
+
 	// Handle Step 3 Age selection: onboarding:age:{ageType}:{userID}
 	if strings.HasPrefix(customID, "onboarding:age:") {
 		w.handleStep3AgeSelection(ctx, s, i, customID)
