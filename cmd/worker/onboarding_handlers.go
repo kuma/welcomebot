@@ -69,6 +69,9 @@ func (w *Worker) handlePreviewButton(ctx context.Context, s *discordgo.Session, 
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	// Send a message in the VC to indicate audio is playing
 	previewMessage := w.i18n.T(ctx, i.GuildID, "onboarding.preview_playing")
 	_, err = s.ChannelMessageSend(vcChannelID, previewMessage)
@@ -218,6 +221,9 @@ func (w *Worker) handleGuideConfirmation(ctx context.Context, s *discordgo.Sessi
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	w.logger.Info("guide confirmed, starting tutorial", "guide", guide, "user_id", userID)
 
 	// Start step 1 of the tutorial
@@ -275,6 +281,9 @@ func (w *Worker) handleBackToGuideSelection(ctx context.Context, s *discordgo.Se
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Rebuild the guide selection UI
 	title := w.i18n.T(ctx, i.GuildID, "onboarding.session_started_title")
@@ -347,6 +356,9 @@ func (w *Worker) handleStep1Next(ctx context.Context, s *discordgo.Session, i *d
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Stop current audio
 	activeSession.StopCurrentAudio()
@@ -422,6 +434,9 @@ func (w *Worker) handleStep1Replay(ctx context.Context, s *discordgo.Session, i 
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	// Acknowledge button click (but keep the same UI)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -480,6 +495,9 @@ func (w *Worker) handleStep2Next(ctx context.Context, s *discordgo.Session, i *d
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Stop current audio
 	activeSession.StopCurrentAudio()
@@ -582,6 +600,9 @@ func (w *Worker) handleStep2Replay(ctx context.Context, s *discordgo.Session, i 
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	// Acknowledge button click (but keep the same UI)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -640,6 +661,9 @@ func (w *Worker) handleStep3AgeSelection(ctx context.Context, s *discordgo.Sessi
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Map age type to role ID
 	var roleID string
@@ -727,6 +751,9 @@ func (w *Worker) handleStep3VoiceSelection(ctx context.Context, s *discordgo.Ses
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	var roleID string
 	var roleName string
 	switch voiceType {
@@ -805,6 +832,9 @@ func (w *Worker) handleStep3EroipuSelection(ctx context.Context, s *discordgo.Se
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	var roleID string
 	var roleName string
 	switch choice {
@@ -873,6 +903,9 @@ func (w *Worker) handleStep3NeochiOkNgSelection(ctx context.Context, s *discordg
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	var roleID string
 	var roleName string
@@ -943,6 +976,9 @@ func (w *Worker) handleStep3NeochiHandlingSelection(ctx context.Context, s *disc
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	var roleName string
 	if choice == "disconnect" {
 		// Give disconnect role
@@ -1008,6 +1044,9 @@ func (w *Worker) handleStep3DMSelection(ctx context.Context, s *discordgo.Sessio
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	var roleID string
 	var roleName string
@@ -1078,6 +1117,9 @@ func (w *Worker) handleStep3FriendSelection(ctx context.Context, s *discordgo.Se
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	var roleID string
 	var roleName string
 	switch choice {
@@ -1146,6 +1188,9 @@ func (w *Worker) handleStep3EventSelection(ctx context.Context, s *discordgo.Ses
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	var roleID string
 	var roleName string
@@ -1220,6 +1265,9 @@ func (w *Worker) handleStep3Next(ctx context.Context, s *discordgo.Session, i *d
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	// Acknowledge interaction
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -1286,6 +1334,9 @@ func (w *Worker) handleStep4Next(ctx context.Context, s *discordgo.Session, i *d
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Stop current audio
 	activeSession.StopCurrentAudio()
@@ -1354,6 +1405,9 @@ func (w *Worker) handleStep4Replay(ctx context.Context, s *discordgo.Session, i 
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	// Acknowledge button click (but keep the same UI)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -1412,6 +1466,9 @@ func (w *Worker) handleStep5Next(ctx context.Context, s *discordgo.Session, i *d
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Stop current audio
 	activeSession.StopCurrentAudio()
@@ -1480,6 +1537,9 @@ func (w *Worker) handleStep5Replay(ctx context.Context, s *discordgo.Session, i 
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	// Acknowledge button click (but keep the same UI)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -1538,6 +1598,9 @@ func (w *Worker) handleStep6Next(ctx context.Context, s *discordgo.Session, i *d
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Stop current audio
 	activeSession.StopCurrentAudio()
@@ -1606,6 +1669,9 @@ func (w *Worker) handleStep6Replay(ctx context.Context, s *discordgo.Session, i 
 		return
 	}
 
+	// Update activity timestamp
+	activeSession.UpdateActivity()
+
 	// Acknowledge button click (but keep the same UI)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -1664,6 +1730,9 @@ func (w *Worker) handleStep7Complete(ctx context.Context, s *discordgo.Session, 
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Stop current audio
 	activeSession.StopCurrentAudio()
@@ -1780,6 +1849,9 @@ func (w *Worker) handleStep7Replay(ctx context.Context, s *discordgo.Session, i 
 		})
 		return
 	}
+
+	// Update activity timestamp
+	activeSession.UpdateActivity()
 
 	// Acknowledge button click (but keep the same UI)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

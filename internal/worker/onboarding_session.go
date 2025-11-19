@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	sessionTimeout = 10 * time.Minute
-	inactivityTimeout = 5 * time.Minute
+	sessionTimeout = 60 * time.Minute
+	inactivityTimeout = 20 * time.Minute
 )
 
 // OnboardingSession handles a single user's onboarding session.
@@ -455,7 +455,7 @@ func (s *OnboardingSession) runOnboardingFlow() {
 
 // step1Welcome plays welcome audio and shows initial message.
 func (s *OnboardingSession) step1Welcome() error {
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// TODO: This is old flow - will be replaced by guide selection flow
 	// Play welcome audio (placeholder)
@@ -492,7 +492,7 @@ func (s *OnboardingSession) step1Welcome() error {
 
 // step2VoiceSelection allows user to select voice preference.
 func (s *OnboardingSession) step2VoiceSelection() error {
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "Step 2: Voice Selection",
@@ -539,7 +539,7 @@ func (s *OnboardingSession) PlayAudioFile(guide, filename string) error {
 // playAudioFile plays an audio file in the voice channel using DCA StreamingSession.
 // This runs in a goroutine and can be stopped via StopCurrentAudio()
 func (s *OnboardingSession) playAudioFile(guide, filename string) error {
-	s.updateActivity()
+	s.UpdateActivity()
 
 	audioPath := fmt.Sprintf("audio/%s/%s", guide, filename)
 	s.logger.Info("playing audio", "path", audioPath)
@@ -612,8 +612,9 @@ func (s *OnboardingSession) stopAudio() {
 	s.logger.Info("stop audio requested")
 }
 
-// updateActivity updates the last activity timestamp.
-func (s *OnboardingSession) updateActivity() {
+// UpdateActivity updates the last activity timestamp.
+// This should be called whenever the user interacts with the onboarding session.
+func (s *OnboardingSession) UpdateActivity() {
 	s.lastActivity = time.Now()
 }
 
@@ -733,8 +734,9 @@ func (s *OnboardingSession) cleanup() {
 
 	// Disconnect from voice
 	if s.voiceConn != nil {
-		// Use background context for cleanup to avoid cancellation
-		ctx := context.Background()
+		// Use background context with timeout for cleanup to avoid indefinite hang
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		if err := s.voiceConn.Disconnect(ctx); err != nil {
 			s.logger.Warn("failed to disconnect voice", "error", err)
 		}
@@ -764,7 +766,7 @@ func (s *OnboardingSession) cleanup() {
 func (s *OnboardingSession) StartStep1(guide string) error {
 	s.selectedGuide = guide
 	s.currentStep = 1
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// Remove "Entrance" role if configured
 	if s.entranceRoleID != "" {
@@ -860,7 +862,7 @@ func (s *OnboardingSession) ReplayCurrentAudio() error {
 // StartStep2 begins step 2 of the onboarding tutorial.
 func (s *OnboardingSession) StartStep2() error {
 	s.currentStep = 2
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// Add "説明会②" role if configured
 	if s.Setsumeikai2RoleID != "" {
@@ -954,7 +956,7 @@ func (s *OnboardingSession) StartStep2() error {
 func (s *OnboardingSession) StartStep3() error {
 	s.currentStep = 3
 	s.currentSubStep = 0 // Reset sub-step
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// Show initial message (plain markdown)
 	content := s.i18n.T(s.ctx, s.guildID, "onboarding.step3_description")
@@ -982,7 +984,7 @@ func (s *OnboardingSession) StartStep3() error {
 // ShowAgeSelection displays age range selection buttons.
 func (s *OnboardingSession) ShowAgeSelection() error {
 	s.currentSubStep = 1
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_age_prompt"),
@@ -1044,7 +1046,7 @@ func (s *OnboardingSession) ShowAgeSelection() error {
 // ShowVoiceTypeSelection displays voice type selection buttons.
 func (s *OnboardingSession) ShowVoiceTypeSelection() error {
 	s.currentSubStep = 2
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_voice_prompt"),
@@ -1097,7 +1099,7 @@ func (s *OnboardingSession) ShowVoiceTypeSelection() error {
 // ShowEroipuSelection displays eroipu OK/NG buttons.
 func (s *OnboardingSession) ShowEroipuSelection() error {
 	s.currentSubStep = 3
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_eroipu_prompt"),
@@ -1135,7 +1137,7 @@ func (s *OnboardingSession) ShowEroipuSelection() error {
 // ShowNeochiOkNgSelection displays neochi OK/NG buttons.
 func (s *OnboardingSession) ShowNeochiOkNgSelection() error {
 	s.currentSubStep = 4
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_neochi_prompt"),
@@ -1173,7 +1175,7 @@ func (s *OnboardingSession) ShowNeochiOkNgSelection() error {
 // ShowNeochiHandlingSelection displays neochi handling buttons.
 func (s *OnboardingSession) ShowNeochiHandlingSelection() error {
 	s.currentSubStep = 5
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_neochi_handling_prompt"),
@@ -1211,7 +1213,7 @@ func (s *OnboardingSession) ShowNeochiHandlingSelection() error {
 // ShowDMSelection displays DM OK/NG buttons.
 func (s *OnboardingSession) ShowDMSelection() error {
 	s.currentSubStep = 6
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_dm_prompt"),
@@ -1249,7 +1251,7 @@ func (s *OnboardingSession) ShowDMSelection() error {
 // ShowFriendSelection displays friend OK/NG buttons.
 func (s *OnboardingSession) ShowFriendSelection() error {
 	s.currentSubStep = 7
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_friend_prompt"),
@@ -1287,7 +1289,7 @@ func (s *OnboardingSession) ShowFriendSelection() error {
 // ShowEventSelection displays event role buttons (users can select both).
 func (s *OnboardingSession) ShowEventSelection() error {
 	s.currentSubStep = 8
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_event_prompt"),
@@ -1325,7 +1327,7 @@ func (s *OnboardingSession) ShowEventSelection() error {
 // ShowStep3Completion shows the final message of step 3 with next button.
 func (s *OnboardingSession) ShowStep3Completion() error {
 	s.currentSubStep = 9
-	s.updateActivity()
+	s.UpdateActivity()
 
 	embed := &discordgo.MessageEmbed{
 		Description: s.i18n.T(s.ctx, s.guildID, "onboarding.step3_completion"),
@@ -1358,7 +1360,7 @@ func (s *OnboardingSession) ShowStep3Completion() error {
 // StartStep4 begins step 4 of the onboarding tutorial.
 func (s *OnboardingSession) StartStep4() error {
 	s.currentStep = 4
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// Message 1: First part of text
 	part1 := s.i18n.T(s.ctx, s.guildID, "onboarding.step4_description_part1")
@@ -1433,7 +1435,7 @@ func (s *OnboardingSession) StartStep4() error {
 // StartStep5 begins step 5 of the onboarding tutorial.
 func (s *OnboardingSession) StartStep5() error {
 	s.currentStep = 5
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// Send plain markdown message with buttons
 	content := s.i18n.T(s.ctx, s.guildID, "onboarding.step5_description")
@@ -1479,7 +1481,7 @@ func (s *OnboardingSession) StartStep5() error {
 // StartStep6 begins step 6 of the onboarding tutorial.
 func (s *OnboardingSession) StartStep6() error {
 	s.currentStep = 6
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// Message 1: First part of text
 	part1 := s.i18n.T(s.ctx, s.guildID, "onboarding.step6_description_part1")
@@ -1581,7 +1583,7 @@ func (s *OnboardingSession) StartStep6() error {
 // StartStep7 begins step 7 of the onboarding tutorial (final step).
 func (s *OnboardingSession) StartStep7() error {
 	s.currentStep = 7
-	s.updateActivity()
+	s.UpdateActivity()
 
 	// Send plain markdown message with buttons
 	content := s.i18n.T(s.ctx, s.guildID, "onboarding.step7_description")

@@ -11,6 +11,33 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Check current kubectl context
+CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null || echo "")
+
+if [ -z "$CURRENT_CONTEXT" ]; then
+    echo -e "${RED}❌ No Kubernetes cluster detected!${NC}"
+    echo ""
+    echo "Please enable Kubernetes in Docker Desktop:"
+    echo "  Docker Desktop → Settings → Kubernetes → Enable Kubernetes"
+    exit 1
+fi
+
+# Switch to kubernetes-admin@kubernetes if not already there
+if [ "$CURRENT_CONTEXT" != "kubernetes-admin@kubernetes" ]; then
+    echo -e "${YELLOW}⚠ Current context: $CURRENT_CONTEXT${NC}"
+    echo -e "${BLUE}Switching to kubernetes-admin@kubernetes context...${NC}"
+    kubectl config use-context kubernetes-admin@kubernetes || {
+        echo -e "${RED}❌ Failed to switch to kubernetes-admin@kubernetes context${NC}"
+        echo ""
+        exit 1
+    }
+    echo -e "${GREEN}✓ Switched to kubernetes-admin@kubernetes${NC}"
+else
+    echo -e "${BLUE}✓ Using kubernetes-admin@kubernetes${NC}"
+fi
+
+echo ""
+
 echo -e "${GREEN}🚀 Starting Production Deployment to welcomebot-lightprod${NC}"
 echo ""
 
